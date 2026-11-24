@@ -65,7 +65,10 @@
     #endif
 #endif
 
-#if defined(__i386) || defined(_M_IX86) ||  defined(__x86_64__) || defined(_M_X64)
+// ARM64EC defines _M_X64/_M_AMD64 (and __x86_64__ under clang) for x64 source
+// compatibility, but the generated code is ARM64. Don't treat it as x86.
+#if (defined(__i386) || defined(_M_IX86) ||  defined(__x86_64__) || defined(_M_X64)) && \
+    !defined(_M_ARM64EC)
   #define SK_CPU_X86 1
 #endif
 
@@ -136,8 +139,8 @@
     #endif
 #endif
 
-// Are we in VisualStudio?
-#ifndef SK_CPU_X64_LEVEL
+// Are we in VisualStudio? (ARM64EC is not x86; see SK_CPU_X86 above.)
+#if !defined(SK_CPU_X64_LEVEL) && !defined(_M_ARM64EC)
     // These checks must be done in descending order to ensure we set the highest
     // available SSE level. 64-bit intel guarantees at least SSE2 support.
     #if defined(__AVX512F__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && \
@@ -161,7 +164,10 @@
 // ARM defines
 #if defined(__arm__) && (!defined(__APPLE__) || !TARGET_IPHONE_SIMULATOR)
     #define SK_CPU_ARM32
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(__arm64ec__)
+    // Clang targeting ARM64EC defines __arm64ec__ and __ARM_NEON but not
+    // __aarch64__. Without SK_CPU_ARM64, NEON code would take its ARMv7
+    // fallbacks (e.g. approximate sqrt).
     #define SK_CPU_ARM64
 #endif
 

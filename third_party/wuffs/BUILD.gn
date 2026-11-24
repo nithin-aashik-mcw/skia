@@ -45,5 +45,12 @@ third_party("wuffs") {
     "WUFFS_CONFIG__MODULE__LZW",
   ]
 
+  if (current_cpu == "arm64ec") {
+    # ARM64EC predefines __x86_64__ (clang) / _M_X64, so Wuffs would otherwise
+    # include x86 intrinsic headers that don't compile for ARM64EC. This is
+    # public because Skia's codec includes the Wuffs header too.
+    public_defines = [ "WUFFS_CONFIG__AVOID_CPU_ARCH" ]
+  }
+
   sources = [ "../externals/wuffs/release/c/wuffs-v0.3.c" ]
 }

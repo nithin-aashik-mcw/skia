@@ -28,6 +28,12 @@ if (skia_use_system_libwebp) {
       # TODO: swizzle ourself in SkWebpCodec instead of requiring this non-standard libwebp.
       "WEBP_SWAP_16BIT_CSP",
     ]
+    if (current_cpu == "arm64ec") {
+      # ARM64EC predefines _M_X64; use a config header so libwebp doesn't pick
+      # its SSE2/SSE4.1 paths. NEON is still used. See arm64ec_config/.
+      defines += [ "HAVE_CONFIG_H" ]
+      include_dirs = [ "arm64ec_config" ]
+    }
   }
 
   third_party("libwebp_sse41") {
@@ -181,5 +187,18 @@ if (skia_use_system_libwebp) {
       "../externals/libwebp/src/utils/thread_utils.c",
       "../externals/libwebp/src/utils/utils.c",
     ]
+
+    if (current_cpu == "arm64ec") {
+      # Upstream CPU detection takes its x86 path on ARM64EC; replace it with
+      # one that reports NEON. See arm64ec_config/cpu_info_arm64ec.inc.
+      sources -= [
+        "../externals/libwebp/sharpyuv/sharpyuv_cpu.c",
+        "../externals/libwebp/src/dsp/cpu.c",
+      ]
+      sources += [
+        "arm64ec_config/cpu_arm64ec.c",
+        "arm64ec_config/sharpyuv_cpu_arm64ec.c",
+      ]
+    }
   }
 }

@@ -42,7 +42,10 @@ if (skia_use_system_libpng) {
       "../externals/libpng/pngwutil.c",
     ]
 
-    if (current_cpu == "arm" || current_cpu == "arm64") {
+    # ARM64EC: clang defines __ARM_NEON, which makes pngpriv.h enable NEON, so
+    # these must be built.
+    if (current_cpu == "arm" || current_cpu == "arm64" ||
+        current_cpu == "arm64ec") {
       sources += [
         "../externals/libpng/arm/arm_init.c",
         "../externals/libpng/arm/filter_neon_intrinsics.c",

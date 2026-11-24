@@ -73,10 +73,23 @@ config("default") {
     # GMs more consistent in the transition.
     cflags += [ "-ffp-contract=off" ]
   }
-
   if (is_win) {
     if (is_clang && current_cpu == "arm64") {
       cflags += [ "--target=arm64-windows" ]
+    }
+    if (current_cpu == "arm64ec") {
+      assert(is_clang, "arm64ec builds require clang-cl; set clang_win")
+      cflags += [
+        "--target=arm64ec-pc-windows-msvc",
+
+        # Same as -ffp-contract=off above: FMA is always available on ARM64,
+        # and contraction changes results (e.g. CubicRoots, Geometry and
+        # PathOps tests fail). clang-cl ignores a bare -ffp-contract, hence
+        # /clang:.
+        "/clang:-ffp-contract=off",
+      ]
+      ldflags += [ "/MACHINE:ARM64EC" ]
+      arflags = [ "/MACHINE:ARM64EC" ]
     }
     cflags += [
       "/bigobj",  # Some of our files are bigger than the regular limits.
@@ -118,11 +131,21 @@ config("default") {
       include_dirs = _include_dirs
     }
 
+    # For ARM64EC, the Windows SDK and MSVC arm64 libs are ARM64X and contain
+    # ARM64EC code too. MSVC's lib/arm64ec holds only a few EC-specific objects
+    # (e.g. chkstk_arm64ec.obj), so it is searched first, then lib/arm64.
+    _lib_cpu = current_cpu
+    if (current_cpu == "arm64ec") {
+      _lib_cpu = "arm64"
+    }
     lib_dirs = [
-      "$win_sdk/Lib/$win_sdk_version/ucrt/$current_cpu",
-      "$win_sdk/Lib/$win_sdk_version/um/$current_cpu",
-      "$win_vc/Tools/MSVC/$win_toolchain_version/lib/$current_cpu",
+      "$win_sdk/Lib/$win_sdk_version/ucrt/$_lib_cpu",
+      "$win_sdk/Lib/$win_sdk_version/um/$_lib_cpu",
     ]
+    if (current_cpu == "arm64ec") {
+      lib_dirs += [ "$win_vc/Tools/MSVC/$win_toolchain_version/lib/arm64ec" ]
+    }
+    lib_dirs += [ "$win_vc/Tools/MSVC/$win_toolchain_version/lib/$_lib_cpu" ]
   } else {
     cflags += [
       "-fPIC",
